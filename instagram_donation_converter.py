@@ -1,9 +1,8 @@
-from dash import Dash, dcc, html, Input, Output, State
+from dash import dcc, html, Dash, Input, Output, State
 import pandas as pd
 import base64
 import json
 import io
-from flask import send_file
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -120,16 +119,13 @@ def update_output(list_of_contents, list_of_names, file_name, n_clicks):
     children = html.Ul([html.Li(name) for name in list_of_names])
 
     if n_clicks > 0:
-        # Convert content into dataframe
-        dfs = [pd.read_json(base64.b64decode(content.split(',')[1])) for content in list_of_contents]
+        # Parse the content and get DataFrame
+        dfs = [parse_json(content, name) for content, name in zip(list_of_contents, list_of_names)]
         combined_df = pd.concat(dfs, ignore_index=True)
         
-        # Convert DataFrame to CSV and encode
-        return children, dcc.send_file(
-            io.BytesIO(combined_df.to_csv(index=False, encoding='utf-8').encode('utf-8')),
-            filename=f"{file_name or 'data'}.csv"
-        )
-    
+        # Use dcc.send_data_frame to send the CSV data
+        return children, dcc.send_data_frame(combined_df.to_csv, filename=f"{file_name or 'data'}.csv", index=False)
+
     return children, None
 
 if __name__ == '__main__':
