@@ -6,7 +6,7 @@ from dash import callback_context
 import os  # Needed to reference environment variables for Heroku
 
 # Initialize the Dash app (using Bootstrap for styling)
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # Heroku will look for this 'server' variable to serve the app
 server = app.server
@@ -136,8 +136,9 @@ def update_output(list_of_contents, list_of_names, file_name, n_clicks):
     if trigger_id == 'btn-csv' and n_clicks > 0:
         frames = [parse_json(c, n) for c, n in zip(list_of_contents, list_of_names)]
         combined_df = pd.concat(frames, ignore_index=True)
-        csv_string = combined_df.to_csv(index=False, encoding='utf-8')  # Corrected line
-        return None, dcc.send_data_frame(csv_string, filename=f"{file_name or 'downloaded_data'}.csv")
+        csv_string = combined_df.to_csv(index=False, encoding='utf-8')
+        b64 = base64.b64encode(csv_string.encode()).decode()
+        return None, dict(content='data:text/csv;base64,' + b64, filename=f"{file_name or 'downloaded_data'}.csv")
                                         
 if __name__ == '__main__':
 # When deploying to Heroku, set debug to False
