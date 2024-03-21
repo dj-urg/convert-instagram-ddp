@@ -1,13 +1,14 @@
-from dash import Dash, dcc, html, Input, Output, State, callback_context
+from dash import Dash, dcc, html, Input, Output, State
 import pandas as pd
 import base64
 import json
-import flask
+import io
+from flask import send_file
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = Dash(__name__, external_stylesheets=external_stylesheets)
-server = app.server  # Required for Heroku
+server = app.server
 
 app.layout = html.Div([
     dcc.Upload(
@@ -101,7 +102,6 @@ def parse_json(contents, filename):
                 'file_name': 'videos_watched'
             })
 
-
     return pd.DataFrame(flat_data)
 
 @app.callback(
@@ -117,26 +117,20 @@ def update_output(list_of_contents, list_of_names, file_name, n_clicks):
     if not list_of_contents:
         return html.Div('No files uploaded.'), None
 
+    children = html.Ul([html.Li(name) for name in list_of_names])
+
     if n_clicks > 0:
-        # Assuming you've processed your input data and have 'combined_df' ready for download
-        # Make sure to replace this with actual data processing logic to generate 'combined_df'
-        # Here's an example assuming 'combined_df' is a pandas DataFrame ready for download
-        frames = [parse_json(c, n) for c, n in zip(list_of_contents, list_of_names)]
-        combined_df = pd.concat(frames, ignore_index=True)
+        # Convert content into dataframe
+        dfs = [pd.read_json(base64.b64decode(content.split(',')[1])) for content in list_of_contents]
+        combined_df = pd.concat(dfs, ignore_index=True)
         
-        # Convert DataFrame to CSV
-        csv_string = combined_df.to_csv(index=False, encoding='utf-8')
-        
-        # Create a string buffer
-        str_io = io.StringIO(csv_string)
-        
-        return None, dcc.send_data(str_io.getvalue(), filename=f"{file_name or 'download'}.csv")
-
-    # For displaying uploaded file names
-    if 'upload-data' in callback_context.triggered[0]['prop_id']:
-        return html.Ul(children=[html.Li(f"File: {name}") for name in list_of_names]), None
-
-    return html.Div('No action detected.'), None
+        # Convert DataFrame to CSV and encode
+        return children, dcc.send_file(
+            io.BytesIO(combined_df.to_csv(index=False, encoding='utf-8').encode('utf-8')),
+            filename=f"{file_name or 'data'}.csv"
+        )
+    
+    return children, None
 
 if __name__ == '__main__':
     app.run_server(debug=True)
