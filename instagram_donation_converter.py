@@ -7,6 +7,8 @@ import pandas as pd
 import json
 import base64
 import os  # Ensure os is imported for Heroku deployment
+from dash.exceptions import PreventUpdate
+import flask
 
 # Initialize the Dash app (using Bootstrap for styling)
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -124,7 +126,7 @@ def parse_json(contents, filename):
     Output('download-csv', 'data'),
     Input('upload-data', 'contents'),
     State('upload-data', 'filename'),
-    State('input-file-name', 'value'),  # The filename input by the user
+    State('input-file-name', 'value'),
     Input('btn-csv', 'n_clicks'),
     prevent_initial_call=True
 )
@@ -138,8 +140,13 @@ def update_output(list_of_contents, list_of_names, file_name, n_clicks):
         frames = [parse_json(c, n) for c, n in zip(list_of_contents, list_of_names)]
         combined_df = pd.concat(frames, ignore_index=True)
         csv_string = combined_df.to_csv(index=False, encoding='utf-8')
-        b64 = base64.b64encode(csv_string.encode()).decode()
-        return None, dict(content='data:text/csv;base64,' + b64, filename=f"{file_name or 'downloaded_data'}.csv")
+        return None, dict(content=csv_string, filename=f"{file_name or 'downloaded_data'}.csv")
+    
+    # Display uploaded file names as feedback
+    if trigger_id == 'upload-data':
+        return html.Ul(children=[html.Li(f"File: {name}") for name in list_of_names]), None
+
+    raise PreventUpdate
                                         
 # Entry point for running the app on Heroku
 server = app.server
