@@ -5,9 +5,8 @@ import json
 from dash import callback_context
 import os  # Needed to reference environment variables for Heroku
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = Dash(__name__, external_stylesheets=external_stylesheets)
+# Initialize the Dash app (using Bootstrap for styling)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # Heroku will look for this 'server' variable to serve the app
 server = app.server
