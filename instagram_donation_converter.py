@@ -2,7 +2,7 @@ from dash import Dash, dcc, html, Input, Output, State, callback_context
 import pandas as pd
 import base64
 import json
-import io
+import flask
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -117,14 +117,23 @@ def update_output(list_of_contents, list_of_names, file_name, n_clicks):
     if not list_of_contents:
         return html.Div('No files uploaded.'), None
 
-    trigger_id = callback_context.triggered[0]['prop_id'].split('.')[0]
-    
-    if trigger_id == 'btn-csv' and n_clicks > 0:
+    if n_clicks > 0:
+        # Assuming you've processed your input data and have 'combined_df' ready for download
+        # Make sure to replace this with actual data processing logic to generate 'combined_df'
+        # Here's an example assuming 'combined_df' is a pandas DataFrame ready for download
         frames = [parse_json(c, n) for c, n in zip(list_of_contents, list_of_names)]
         combined_df = pd.concat(frames, ignore_index=True)
-        return None, dcc.send_file(io.StringIO(combined_df.to_csv(index=False)), f"{file_name or 'download'}.csv")
-    
-    if trigger_id == 'upload-data':
+        
+        # Convert DataFrame to CSV
+        csv_string = combined_df.to_csv(index=False, encoding='utf-8')
+        
+        # Create a string buffer
+        str_io = io.StringIO(csv_string)
+        
+        return None, dcc.send_data(str_io.getvalue(), filename=f"{file_name or 'download'}.csv")
+
+    # For displaying uploaded file names
+    if 'upload-data' in callback_context.triggered[0]['prop_id']:
         return html.Ul(children=[html.Li(f"File: {name}") for name in list_of_names]), None
 
     return html.Div('No action detected.'), None
