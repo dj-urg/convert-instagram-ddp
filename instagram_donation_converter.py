@@ -1,47 +1,30 @@
-# Import necessary libraries
-from datetime import datetime
-import dash
-from dash import dcc, html, Input, Output, dash_table, callback, State
-import dash_bootstrap_components as dbc
+from dash import Dash, dcc, html, Input, Output, State, callback_context
 import pandas as pd
-import json
 import base64
-import os  # Ensure os is imported for Heroku deployment
-from dash.exceptions import PreventUpdate
-import flask
+import json
+import io
 
-# Initialize the Dash app (using Bootstrap for styling)
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-# Define the layout of the app
+app = Dash(__name__, external_stylesheets=external_stylesheets)
+server = app.server  # Required for Heroku
+
 app.layout = html.Div([
     dcc.Upload(
         id='upload-data',
-        children=html.Div([
-            'Drag and Drop or ',
-            html.A('Select Files')
-        ]),
+        children=html.Div(['Drag and Drop or ', html.A('Select Files')]),
         style={
-            'width': '100%',
-            'height': '60px',
-            'lineHeight': '60px',
-            'borderWidth': '1px',
-            'borderStyle': 'dashed',
-            'borderRadius': '5px',
-            'textAlign': 'center',
-            'margin': '10px'
+            'width': '100%', 'height': '60px', 'lineHeight': '60px',
+            'borderWidth': '1px', 'borderStyle': 'dashed',
+            'borderRadius': '5px', 'textAlign': 'center', 'margin': '10px'
         },
         multiple=True
     ),
     html.Div([
-        dcc.Input(
-            id='input-file-name',
-            type='text',
-            placeholder='Enter file name',
-            style={'marginRight': '10px'}  # Add some spacing between the input and the button
-        ),
+        dcc.Input(id='input-file-name', type='text', placeholder='Enter file name',
+                  style={'marginRight': '10px'}),
         html.Button('Download CSV', id='btn-csv', n_clicks=0),
-    ], style={'marginTop': '20px'}),  # Add some spacing above this Div
+    ], style={'marginTop': '20px'}),
     dcc.Download(id='download-csv'),
     html.Div(id='output-data-upload'),
 ])
@@ -50,7 +33,7 @@ def parse_json(contents, filename):
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
     data = json.loads(decoded.decode('utf-8'))
-    
+
     flat_data = []
 
     # Process 'saved_saved_media' structure
@@ -122,34 +105,29 @@ def parse_json(contents, filename):
     return pd.DataFrame(flat_data)
 
 @app.callback(
-    Output('output-data-upload', 'children'),
-    Output('download-csv', 'data'),
-    Input('upload-data', 'contents'),
-    State('upload-data', 'filename'),
-    State('input-file-name', 'value'),
-    Input('btn-csv', 'n_clicks'),
+    [Output('output-data-upload', 'children'),
+     Output('download-csv', 'data')],
+    [Input('upload-data', 'contents'),
+     State('upload-data', 'filename'),
+     State('input-file-name', 'value'),
+     Input('btn-csv', 'n_clicks')],
     prevent_initial_call=True
 )
 def update_output(list_of_contents, list_of_names, file_name, n_clicks):
     if not list_of_contents:
         return html.Div('No files uploaded.'), None
-    
+
     trigger_id = callback_context.triggered[0]['prop_id'].split('.')[0]
     
     if trigger_id == 'btn-csv' and n_clicks > 0:
         frames = [parse_json(c, n) for c, n in zip(list_of_contents, list_of_names)]
         combined_df = pd.concat(frames, ignore_index=True)
-        csv_string = combined_df.to_csv(index=False, encoding='utf-8')
-        return None, dict(content=csv_string, filename=f"{file_name or 'downloaded_data'}.csv")
+        return None, dcc.send_file(io.StringIO(combined_df.to_csv(index=False)), f"{file_name or 'download'}.csv")
     
-    # Display uploaded file names as feedback
     if trigger_id == 'upload-data':
         return html.Ul(children=[html.Li(f"File: {name}") for name in list_of_names]), None
 
-    raise PreventUpdate
-                                        
-# Entry point for running the app on Heroku
-server = app.server
+    return html.Div('No action detected.'), None
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=int(os.environ.get('PORT', 8051)))
+    app.run_server(debug=True)
