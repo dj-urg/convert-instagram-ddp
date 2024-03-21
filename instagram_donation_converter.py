@@ -3,12 +3,14 @@ import pandas as pd
 import base64
 import json
 from dash import callback_context
-import os  # Ensure os is imported for Heroku deployment
+import os  # Needed to reference environment variables for Heroku
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = Dash(__name__, external_stylesheets=external_stylesheets)
-server = app.server  # This is required by Gunicorn, which Heroku will use to serve the app
+
+# Heroku will look for this 'server' variable to serve the app
+server = app.server
 
 app.layout = html.Div([
     dcc.Upload(
@@ -126,7 +128,7 @@ def parse_json(contents, filename):
     Input('btn-csv', 'n_clicks'),
     prevent_initial_call=True
 )
-def update_output(list_of_contents, list_of_names, file_name, n_clicks):  # Add file_name parameter
+def update_output(list_of_contents, list_of_names, file_name, n_clicks):
     if not list_of_contents:
         return html.Div('No files uploaded.'), None
     
@@ -135,18 +137,9 @@ def update_output(list_of_contents, list_of_names, file_name, n_clicks):  # Add 
     if trigger_id == 'btn-csv' and n_clicks > 0:
         frames = [parse_json(c, n) for c, n in zip(list_of_contents, list_of_names)]
         combined_df = pd.concat(frames, ignore_index=True)
-        # Use the file name specified by the user, adding a default name if not specified
-        csv_file_name = f"{file_name or 'download'}.csv"
-        return None, dcc.send_data_frame(combined_df.to_csv, filename=csv_file_name)
-    
-    # Display uploaded file names as feedback
-    if trigger_id == 'upload-data':
-        return html.Ul(children=[html.Li(f"File: {name}") for name in list_of_names]), None
-
-    return html.Div('No action detected.'), None
-
-# Entry point for running the app on Heroku
-server = app.server
-
+        csv_string = combined_df.to_csv(index=False, encoding='utf-8')  # Corrected line
+        return None, dcc.send_data_frame(csv_string, filename=f"{file_name or 'downloaded_data'}.csv")
+                                        
 if __name__ == '__main__':
-    app.run_server(debug=True, port=int(os.environ.get('PORT', 8051)))
+# When deploying to Heroku, set debug to False
+    app.run_server(debug=False)
