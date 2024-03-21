@@ -1,1 +1,1 @@
-web: gunicorn app:server
+web: gunicorn instagram_donation_converter:server
