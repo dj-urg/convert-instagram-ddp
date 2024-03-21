@@ -1,16 +1,17 @@
-from dash import Dash, dcc, html, Input, Output, State
+# Import necessary libraries
+from datetime import datetime
+import dash
+from dash import dcc, html, Input, Output, dash_table, callback, State
+import dash_bootstrap_components as dbc
 import pandas as pd
-import base64
 import json
-from dash import callback_context
-import os  # Needed to reference environment variables for Heroku
+import base64
+import os  # Ensure os is imported for Heroku deployment
 
 # Initialize the Dash app (using Bootstrap for styling)
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-# Heroku will look for this 'server' variable to serve the app
-server = app.server
-
+# Define the layout of the app
 app.layout = html.Div([
     dcc.Upload(
         id='upload-data',
@@ -140,6 +141,8 @@ def update_output(list_of_contents, list_of_names, file_name, n_clicks):
         b64 = base64.b64encode(csv_string.encode()).decode()
         return None, dict(content='data:text/csv;base64,' + b64, filename=f"{file_name or 'downloaded_data'}.csv")
                                         
+# Entry point for running the app on Heroku
+server = app.server
+
 if __name__ == '__main__':
-# When deploying to Heroku, set debug to False
-    app.run_server(debug=False)
+    app.run_server(debug=True, port=int(os.environ.get('PORT', 8051)))
