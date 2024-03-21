@@ -3,6 +3,7 @@ import pandas as pd
 import base64
 import json
 from dash import callback_context
+import os  # Ensure os is imported for Heroku deployment
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -144,5 +145,8 @@ def update_output(list_of_contents, list_of_names, file_name, n_clicks):  # Add 
 
     return html.Div('No action detected.'), None
 
+# Entry point for running the app on Heroku
+server = app.server
+
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, port=int(os.environ.get('PORT', 8051)))
