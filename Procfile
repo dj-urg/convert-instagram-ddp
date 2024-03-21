@@ -1,1 +1,1 @@
-web: gunicorn tiktok-ddp-converter:server
+web: gunicorn instagram-donation-converter:server
