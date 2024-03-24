@@ -101,6 +101,21 @@ def parse_json(contents, filename):
                 'file_name': 'videos_watched'
             })
 
+    # Process 'relationships_following' structure
+    if 'relationships_following' in data:
+        for item in data['relationships_following']:
+            for entry in item['string_list_data']:
+                title = entry.get('value', 'Unknown')
+                href = entry.get('href', 'N/A')  # Getting 'href' directly
+                timestamp = entry.get('timestamp', 0)
+                flat_data.append({
+                    'title': title,
+                    'href': href,
+                    'timestamp': pd.to_datetime(timestamp, unit='s'),
+                    'category': 'relationships_following',
+                    'file_name': 'following'
+            })
+
     return pd.DataFrame(flat_data)
 
 @app.callback(
